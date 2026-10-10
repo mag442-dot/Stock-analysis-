@@ -98,3 +98,10 @@ def test_finalists_order():
     scored = scoring.score_frame(pd.DataFrame(rows), CFG, ASOF)
     fin = scoring.pick_finalists(scored, CFG)
     assert list(fin["symbol"]) == ["AAA", "BBB"]  # Opportunity, then Watch; knife excluded
+
+
+def test_nan_dates_from_csv_do_not_crash_or_haircut():
+    nan = float("nan")
+    s = scoring.score_row(base_row(last_earnings=nan, next_earnings=nan), CFG, ASOF)
+    assert s["event_f"] == 1.0
+    assert s["days_to_earnings"] is None

@@ -20,6 +20,11 @@ def _num(x):
         return None
 
 
+def _txt(x):
+    """CSV round-trips turn missing strings into NaN (truthy); normalise to None."""
+    return None if x is None or (isinstance(x, float) and pd.isna(x)) else x
+
+
 def depth_factor(n: float | None, table: list) -> float:
     n = n or 0
     for threshold, factor in sorted(table, key=lambda r: -r[0]):
@@ -77,14 +82,14 @@ def score_row(r: dict, cfg: dict, asof: date) -> dict:
 
     n = _num(r.get("n_analysts"))
     depth = depth_factor(n, sc["depth_factors"])
-    note_age = _days(asof, r.get("newest_note"))
+    note_age = _days(asof, _txt(r.get("newest_note")))
     age = age_factor(note_age, sc["age_factors"])
     if note_age is None:
         flags.append("undated targets")
 
     event = 1.0
-    last_earn = r.get("last_earnings")
-    newest = r.get("newest_note")
+    last_earn = _txt(r.get("last_earnings"))
+    newest = _txt(r.get("newest_note"))
     if last_earn and newest and str(newest)[:10] < str(last_earn)[:10]:
         event = sc["event_haircut"]
         flags.append("targets predate last earnings")
@@ -111,8 +116,8 @@ def score_row(r: dict, cfg: dict, asof: date) -> dict:
     if chg is not None and chg <= -sc["stale_price_drop"]:
         flags.append(f"price {chg:+.0%} in 60d: targets may be stale")
 
-    nxt = r.get("next_earnings")
-    days_to = -_days(asof, nxt) if nxt else None
+    nd = _days(asof, _txt(r.get("next_earnings")))
+    days_to = -nd if nd is not None else None
     if days_to is not None and 0 <= days_to <= cfg["finalists"]["earnings_soon_days"]:
         flags.append("reports within 14d: targets about to reset")
 
