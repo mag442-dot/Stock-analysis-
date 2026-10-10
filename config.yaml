@@ -1,0 +1,73 @@
+# Stock Scout configuration. All percentages are decimals (0.20 = 20%).
+
+universe:
+  exclude_symbols: [EZPW]   # standing rule: never a buy/sell idea
+  exclude_etfs: true
+  exclude_name_keywords: [warrant, unit, right, preferred, depositary shares, notes due, acquisition corp]
+
+# Stage 1 - bulk price download (no per-ticker calls). Cuts ~6,000 listings to ~600-1,200.
+prefilter:
+  min_price: 5
+  min_avg_dollar_volume: 10000000   # 20-day average, $10M/day
+  # Dislocation: keep a name if EITHER condition is true. Set both off to skip.
+  min_drawdown_from_52w_high: 0.20
+  keep_if_below_200d_sma: true
+
+# Stage 2 - per-ticker snapshot (yfinance .info). Cuts to ~150-300.
+screen:
+  min_market_cap: 1000000000
+  require_positive_forward_pe: true
+  max_forward_pe: 40
+  min_analysts: 5
+  min_raw_upside: 0.15
+
+# Stage 3 - deep data on survivors: rating split, dated notes, EPS revisions, earnings dates.
+# Scoring follows the portfolio-analyst-potential method.
+scoring:
+  depth_factors:   # analysts -> factor (first threshold met wins)
+    - [30, 1.00]
+    - [15, 0.85]
+    - [10, 0.70]
+    - [0, 0.50]
+  age_factors:     # days since newest dated note -> factor
+    - [30, 1.00]
+    - [60, 0.95]
+    - [90, 0.85]
+    - [120, 0.75]
+    - [100000, 0.60]
+  event_haircut: 0.85        # target predates the most recent earnings report
+  fresh_window_days: 90      # notes used for the "fresh target" cross-check
+  fresh_min_firms: 3
+  fresh_divergence: 0.10     # use fresh target if it differs from consensus by >10%
+  revision_window_days: 60
+  stale_price_drop: 0.20     # flag: price fell >20% in 60 days (targets likely stale)
+  # Revision multiplier applied to adjusted upside for ranking
+  multipliers:
+    confirming: 1.15         # EPS estimates up and target raises >= cuts
+    neutral: 1.00
+    falling_knife: 0.60      # EPS estimates cut >3% or cuts clearly outnumber raises
+  falling_knife_eps_cut: -0.03
+  falling_knife_net_revisions: -0.25
+
+finalists:
+  count: 25
+  min_adjusted_upside: 0.10
+  earnings_soon_days: 14
+
+# Optional cross-check. FMP analyst endpoints are plan-gated for many symbols;
+# gated symbols are cached and skipped on later runs.
+fmp:
+  enabled: true              # needs FMP_API_KEY in .env
+
+# Optional X sentiment for finalists only. Official X API, pay-per-use.
+x:
+  enabled: false             # needs X_BEARER_TOKEN in .env
+  posts_per_ticker: 200
+  expand_authors: true       # author follower counts; billed as user reads
+  cost_per_post: 0.005
+  cost_per_user: 0.010
+  max_cost_usd: 25           # hard stop for one run
+
+rate_limit:
+  info_sleep_seconds: 0.35
+  price_batch_size: 200

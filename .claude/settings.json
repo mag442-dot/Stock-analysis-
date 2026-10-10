@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python run_pipeline.py:*)",
+      "Bash(python3 run_pipeline.py:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(python -c:*)",
+      "Bash(python3 -c:*)",
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit(data/**)",
+      "Edit(reports/**)",
+      "Write(data/**)",
+      "Write(reports/**)",
+      "WebSearch",
+      "WebFetch"
+    ],
+    "deny": [
+      "Read(.env)"
+    ]
+  }
+}
